@@ -9,7 +9,7 @@ int main()
     low = -289.0;
     high = 1000.0;
     step = 20;
-
+  
     celc = low;
     printf("Celcius to Farenheit table \n");
     while (celc <= high)
