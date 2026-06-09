@@ -1,42 +1,72 @@
 #include "raylib.h"
 #include <math.h>
-
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
 #define AMPLITUDE 100
+#define WIDTH 1000
+#define HEIGHT 600
+typedef struct {
+  double d, angle, speed, radius;
+  Color color;
+} Circle;
+
+int circle_count = 1;
+void draw_circle(Circle *circle) {
+  for (int i = 0; i < circle_count; i++) {
+    double x = circle[i].d * sin(circle[i].angle) + WIDTH / 2;
+    double y = circle[i].d * cos(circle[i].angle) + HEIGHT / 2;
+    DrawCircle(x, y, circle[i].radius, circle[i].color);
+  }
+}
+
+void move_circle(Circle *circle, float time_difference) {
+  for (int i = 0; i < circle_count; i++) {
+    circle[i].angle += circle->speed * time_difference;
+  }
+}
+
+void generate_circle(Circle *circle) {
+
+  circle[circle_count - 1].d = rand() % 100;
+  circle[circle_count - 1].angle = 0;
+  circle[circle_count - 1].speed = rand() % 9 + 1;
+  circle[circle_count - 1].radius = rand() % 50;
+
+  // now lets also genrate the circle color
+  circle[circle_count - 1].color.r = rand() % 256;
+
+  circle[circle_count - 1].color.g = rand() % 256;
+
+  circle[circle_count - 1].color.b = rand() % 256;
+  circle[circle_count - 1].color.a = 255;
+}
 int main(void) {
-  int width = 800;
-  int height = 450;
-  InitWindow(width, height, "my first animation");
-  double angle = 0;
-  double x, y;
+  srand(time(NULL));
+  Circle *circle_memory = malloc(sizeof(Circle));
+  generate_circle(&circle_memory[circle_count - 1]);
+  InitWindow(WIDTH, HEIGHT, "my first animation");
   SetTargetFPS(60);
   while (!WindowShouldClose()) {
+    KeyboardKey key = KEY_ENTER;
+    if (IsKeyPressed(key)) {
+      printf("key pressed \n");
+      circle_count++;
+      circle_memory = realloc(circle_memory, circle_count * sizeof(Circle));
+      Circle *new_circle = circle_memory;
+      generate_circle(new_circle);
+    }
+    move_circle(circle_memory, GetFrameTime());
     BeginDrawing();
     ClearBackground(BLACK);
     DrawFPS(20, 20);
     DrawText("ok this is a cirle moving in a circle!", 120, 20, 20, LIGHTGRAY);
-    Color mycolor = {255, 0, 0, 255};
-    Color secondColor = {0, 255, 0, 255};
-    Color thirdColor = {0, 0, 255, 255};
-    x = AMPLITUDE * sin(angle) + width / 2;
-    y = AMPLITUDE * cos(angle) + height / 2;
-
-    DrawCircle(x, y, 51.00, mycolor);
-    x = AMPLITUDE * 0.5 * sin(angle - 3) + width / 2;
-    y = AMPLITUDE * 0.5 * cos(angle - 3) + height / 2;
-
-    DrawCircle(x, y, 20.0, secondColor);
-    x = AMPLITUDE * 0.2 * sin(angle - 2) + width / 2;
-
-    y = AMPLITUDE * 0.2 * cos(angle - 2) + height / 2;
-
-    DrawCircle(x, y, 12.00, thirdColor);
-
-    angle += 0.04;
-
+    draw_circle(circle_memory);
     EndDrawing();
   }
 
   CloseWindow();
+  free(circle_memory);
 
   return 0;
 }
