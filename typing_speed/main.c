@@ -1,4 +1,6 @@
+#include <fcntl.h>
 #include <inttypes.h>
+#include <ncurses.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,6 +10,9 @@
 #include <time.h>
 #include <unistd.h>
 // sample text
+//
+static struct termios oldt;
+static int old_flags;
 typedef struct {
   int hours;
   int minutes;
@@ -40,28 +45,28 @@ char *calculate_timer_string(Timer *timer, int seconds_elapsed) {
   return timer_string;
 }
 char *txt =
-    "\nThe think tank of China’s People’s Liberation Army Rocket Force "
-    "recently "
-    "recruited 13 Chinese technicians\nfrom private companies, PLA Daily "
-    "reported on Saturday."
-    "\nZhang Hao and 12 other science and technology experts received letters"
-    " of appointment at the founding ceremony of "
-    "\nthe PLA Rocket Force national defense science and technology experts "
-    "panel, according to a report published by the"
-    "\nPLA Daily on Saturday."
-    "\nHonored as rocket force science and technology experts,” Zhang and his"
-    " fellow experts from private companies will "
-    "\nserve as members of the PLA Rocket Force think tank, which will conduct "
-    " research into fields like overall design of "
-    "\nthe missiles, missile launching and network system technology for five"
-    " years."
-    "\nThe experts will enjoy the same treatment as their counterparts"
-    " from State - owned firms,the report said."
-    "\nThe PLA Daily said that this marks a new development in deepening "
-    "military - civilian integration in China,which "
-    "\ncould make science and technology innovation better contribute to "
-    "the"
-    "\nenhancement of the force’s combat capabilities \n";
+    "The think tank of Chinas Peoples Liberation Army Rocket Force "
+    "recently\n"
+    "recruited 13 Chinese technicians from private companies, PLA Daily "
+    "reported on Saturday.\n"
+    "Zhang Hao and 12 other science and technology experts received letters"
+    " of appointment at the founding ceremony of\n"
+    "the PLA Rocket Force national defense science and technology experts "
+    "panel, according to a report published by the\n"
+    "PLA Daily on Saturday.\n"
+    "Honored as rocket force science and technology experts,” Zhang and his"
+    " fellow experts from private companies will \n"
+    "serve as members of the PLA Rocket Force think tank, which will conduct "
+    " research into fields like overall design of \n"
+    "the missiles, missile launching and network system technology for five"
+    " years.\n"
+    "The experts will enjoy the same treatment as their counterparts"
+    " from State - owned firms,the report said.\n"
+    "The PLA Daily said that this marks a new development in deepening "
+    "military - civilian integration in China,which \n"
+    "could make science and technology innovation better contribute to "
+    "the \n"
+    "enhancement of the forces combat capabilities\n";
 
 //  Color Escape Combinations
 const int FRAME_RATE = 120;
@@ -169,6 +174,8 @@ void print_with_color(const char *text_color, const char *text_bg_color,
 
 void show_start_menu(int *no_of_words, int *time_in_seconds) {
   clear_screen();
+  get_curr_winsize(w);
+  move_cursor(1, 1);
   print_with_color(TXT_CYAN, NULL, true, splash_text);
   // print_with_color(TXT_CYAN, NULL, "Please enter the no of words: ");
   // scanf("%d", no_of_words);
@@ -199,16 +206,25 @@ void start_timer(Timer *timer, int seconds_elapsed) {
   move_cursor(row, col);
   print_with_color(TXT_GREEN, NULL, true, timer_string);
 }
-char getch() {
-  struct termios oldt, newt;
+void setup_terminal() {
+
   tcgetattr(STDIN_FILENO, &oldt);
-  newt = oldt;
+
+  struct termios newt = oldt;
   newt.c_lflag &= ~(ICANON | ECHO);
+
   tcsetattr(STDIN_FILENO, TCSANOW, &newt);
-  char ch = getchar();
-  tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
-  return ch;
+
+  old_flags = fcntl(STDIN_FILENO, F_GETFL, 0);
+  fcntl(STDIN_FILENO, F_SETFL, old_flags | O_NONBLOCK);
 }
+
+void restore_terminal() {
+  tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+
+  fcntl(STDIN_FILENO, F_SETFL, old_flags);
+}
+
 void get_position(char *txt, int index, int *r, int *c, int start_row,
                   int start_col) {
   *r = start_row;
@@ -216,12 +232,13 @@ void get_position(char *txt, int index, int *r, int *c, int start_row,
   for (int j = 0; j < index && txt[j]; j++) {
     if (txt[j] == '\n') {
       (*r)++;
+      *c = start_col;
     } else {
       (*c)++;
     }
   }
 }
-void print_progress(char *txt, char *progress) {
+void print_progress(char *txt, char *progress, int *r, int *c) {
   struct winsize w;
   get_curr_winsize(&w);
   int txt_row = 2;
@@ -229,11 +246,9 @@ void print_progress(char *txt, char *progress) {
   move_cursor(txt_row, txt_col);
   print_with_color(TXT_WHITE, NULL, false, txt);
   // print_with_color(TXT_GREEN, NULL, false, progress);
-  for (int i = 0; i < strlen(progress); i++) {
-
-    int r, c;
-    get_position(txt, i, &r, &c, txt_row, txt_col);
-    move_cursor(r, c);
+  for (int i = 0; progress[i] != '\0'; i++) {
+    get_position(txt, i, r, c, txt_row, txt_col);
+    move_cursor(*r, *c);
     char buf[2] = {txt[i], '\0'};
     if (txt[i] == progress[i]) {
       print_with_color(TXT_GREEN, NULL, false, buf);
@@ -242,7 +257,12 @@ void print_progress(char *txt, char *progress) {
       print_with_color(TXT_RED, NULL, false, buf);
     }
   }
+  get_position(txt, strlen(progress), r, c, txt_row, txt_col);
+  move_cursor(*r, *c);
+  fflush(stdout);
 }
+void get_current_position_of_cursor(int *r, int *c) {}
+void show_result() {}
 void start_test(int *words, int *time, double *lag, bool *running) {
   double last_time = get_time_in_seconds();
   double start_time = get_time_in_seconds();
@@ -251,13 +271,30 @@ void start_test(int *words, int *time, double *lag, bool *running) {
   double seconds_accumlator = 0.0;
   int i = 0;
   int text_length = strlen(txt);
-  char *progress = malloc(text_length);
+  char *progress = malloc(text_length + 1);
+  progress[i] = '\0';
+  int r = 0;
+  int c = 0;
   while (*running) {
-    char ch = getch();
-    progress[i] = ch;
-    // strcat(progress, chi);
-    i++;
-
+    char ch;
+    ssize_t n = read(STDIN_FILENO, &ch, 4);
+    if (n == 1) {
+      if (ch == 127 || ch == 8) {
+        if (i > 0) {
+          i--;
+          progress[i] = '\0';
+        }
+        // move_cursor(r, c - 1);
+      } else if (ch == '\n') {
+      } else {
+        if (i < text_length) {
+          progress[i] = ch;
+          i++;
+          // strcat(progress, chi);
+          progress[i] = '\0';
+        }
+      }
+    }
     double current_time = get_time_in_seconds();
     double time_elapsed = current_time - last_time;
 
@@ -269,18 +306,21 @@ void start_test(int *words, int *time, double *lag, bool *running) {
       seconds_elapsed += (int)seconds_accumlator;
       seconds_accumlator = 0.0;
     }
+
     while (*lag >= TICK_RATE) {
       *lag -= TICK_RATE;
     }
 
     start_timer(&timer, (int)seconds_elapsed);
-    print_progress(txt, progress);
 
-    if (*time < (int)seconds_elapsed && i <= text_length) {
+    print_progress(txt, progress, &r, &c);
+
+    if (*time < (int)seconds_elapsed && i < text_length) {
       *running = false;
     }
-    usleep(12000);
+    usleep(8000);
   };
+  show_result();
 }
 
 int main(int argc, char *argv[]) {
@@ -291,6 +331,9 @@ int main(int argc, char *argv[]) {
   int time_in_seconds = 0;
   bool running = true;
   show_start_menu(&no_of_words, &time_in_seconds);
+
+  setup_terminal();
   start_test(&no_of_words, &time_in_seconds, &lag, &running);
+  restore_terminal();
   return 0;
 }
