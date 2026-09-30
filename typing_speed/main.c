@@ -46,14 +46,14 @@ char *calculate_timer_string(Timer *timer, int seconds_elapsed) {
 }
 char *txt =
     "The think tank of Chinas Peoples Liberation Army Rocket Force "
-    "recently\n"
+    "recently \n"
     "recruited 13 Chinese technicians from private companies, PLA Daily "
     "reported on Saturday.\n"
     "Zhang Hao and 12 other science and technology experts received letters"
-    " of appointment at the founding ceremony of\n"
+    " of appointment at the founding ceremony of \n"
     "the PLA Rocket Force national defense science and technology experts "
-    "panel, according to a report published by the\n"
-    "PLA Daily on Saturday.\n"
+    "panel, according to a report published by the \n"
+    "PLA Daily on Saturday."
     "Honored as rocket force science and technology experts,” Zhang and his"
     " fellow experts from private companies will \n"
     "serve as members of the PLA Rocket Force think tank, which will conduct "
@@ -66,7 +66,7 @@ char *txt =
     "military - civilian integration in China,which \n"
     "could make science and technology innovation better contribute to "
     "the \n"
-    "enhancement of the forces combat capabilities\n";
+    "enhancement of the forces combat capabilities.";
 
 //  Color Escape Combinations
 const int FRAME_RATE = 120;
@@ -182,6 +182,8 @@ void show_start_menu(int *no_of_words, int *time_in_seconds) {
   print_with_color(TXT_CYAN, NULL, true,
                    "Please enter the time limit in seconds: ");
   scanf("%d", time_in_seconds);
+  // calcuate accuracy
+
   clear_screen();
 }
 
@@ -261,8 +263,54 @@ void print_progress(char *txt, char *progress, int *r, int *c) {
   move_cursor(*r, *c);
   fflush(stdout);
 }
+int calculate_words_in_progress(char *progress) {
+  int word_count = 0;
+  for (int i = 0; i < strlen(txt); i++) {
+    if (progress[i] == ' ') {
+      word_count++;
+    }
+  }
+  return word_count + 1;
+}
+int calculate_errors(char *progress) {
+  int errors = 0;
+  for (int i = 0; i < strlen(progress); i++) {
+    if (txt[i] != progress[i]) {
+      errors++;
+    }
+  }
+  return errors;
+}
 void get_current_position_of_cursor(int *r, int *c) {}
-void show_result() {}
+void show_result(char *progress, int seconds_elapsed) {
+  // calculate no of words
+  clear_screen();
+  // int no_of_words = calculate_words_in_progress(progress);
+  int errors = calculate_errors(progress);
+  int no_of_words = strlen(progress) / 5;
+  //  calcualte wpm and
+  int gross_wpm = (int)((float)no_of_words / ((float)seconds_elapsed / 60.00));
+  int normalized_wpm = gross_wpm - errors / ((float)seconds_elapsed / 60.00);
+  char *wpm_string = malloc(20);
+  strcat(wpm_string, "words per minute = ");
+  char wpm_[3];
+  snprintf(wpm_, sizeof(wpm_), "%d", normalized_wpm);
+  strcat(wpm_string, wpm_);
+  move_cursor(1, 1);
+  print_with_color(TXT_GREEN, NULL, true, wpm_string);
+  int total_characters = strlen(progress);
+  int correct_characters = total_characters - errors;
+  float accuracy =
+      ((float)(correct_characters) / (float)total_characters) * 100.00;
+  char *accuracy_string = malloc(30);
+  strcat(accuracy_string, "accuracy = ");
+  char accuracy_wpm[10];
+  snprintf(accuracy_wpm, sizeof(accuracy_wpm), "%f", accuracy);
+  strcat(accuracy_string, accuracy_wpm);
+  print_with_color(TXT_GREEN, NULL, true, accuracy_string);
+  free(wpm_string);
+  free(accuracy_string);
+}
 void start_test(int *words, int *time, double *lag, bool *running) {
   double last_time = get_time_in_seconds();
   double start_time = get_time_in_seconds();
@@ -277,7 +325,7 @@ void start_test(int *words, int *time, double *lag, bool *running) {
   int c = 0;
   while (*running) {
     char ch;
-    ssize_t n = read(STDIN_FILENO, &ch, 4);
+    ssize_t n = read(STDIN_FILENO, &ch, 1);
     if (n == 1) {
       if (ch == 127 || ch == 8) {
         if (i > 0) {
@@ -320,7 +368,9 @@ void start_test(int *words, int *time, double *lag, bool *running) {
     }
     usleep(8000);
   };
-  show_result();
+
+  show_result(progress, seconds_elapsed);
+  free(progress);
 }
 
 int main(int argc, char *argv[]) {
