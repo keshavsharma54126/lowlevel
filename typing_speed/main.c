@@ -369,7 +369,7 @@ void start_test(int *words, int *time, double *lag, bool *running) {
     if (*time < (int)seconds_elapsed && i < text_length) {
       *running = false;
     }
-    usleep(8000);
+    usleep(12000);
   };
 
   show_result(progress, seconds_elapsed);
