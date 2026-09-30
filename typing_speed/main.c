@@ -1,3 +1,5 @@
+// [2026] [Keshav sharma] all rights reserved
+
 #include <fcntl.h>
 #include <inttypes.h>
 #include <ncurses.h>
@@ -10,6 +12,7 @@
 #include <time.h>
 #include <unistd.h>
 // sample text
+//
 //
 static struct termios oldt;
 static int old_flags;
@@ -374,16 +377,34 @@ void start_test(int *words, int *time, double *lag, bool *running) {
 }
 
 int main(int argc, char *argv[]) {
+  // get random text from harry potter book
+  srandom(time(NULL));
+  int random_no = random() / 440000;
+  int fd =
+      open("./J. K. Rowling - Harry Potter 1 - Sorcerer's Stone.txt", O_RDONLY);
+
+  char *random_harry_potter = malloc(1024);
+  lseek(fd, random_no, SEEK_SET);
+  ssize_t n = read(fd, random_harry_potter, 1024 - 1);
+  if (n < 0) {
+    perror("read");
+    exit(1);
+  }
+  random_harry_potter[1024] = '\0';
+  txt = random_harry_potter;
   double last_time = get_time_in_seconds();
   double lag = 0.0;
 
   int no_of_words = 0;
   int time_in_seconds = 0;
   bool running = true;
+
   show_start_menu(&no_of_words, &time_in_seconds);
 
   setup_terminal();
   start_test(&no_of_words, &time_in_seconds, &lag, &running);
   restore_terminal();
+  free(random_harry_potter);
+  close(fd);
   return 0;
 }
