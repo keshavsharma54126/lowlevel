@@ -24,5 +24,6 @@ int main() {
       printf("%d ('%c')/n", ch, ch);
     }
   }
+
   return 1;
 }
