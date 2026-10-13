@@ -7,19 +7,32 @@
 #include <termios.h>
 #include <unistd.h>
 
+#define CTRL_KEY(k) ((k) & 0x1f)
 /************ data *****************/
 static struct termios oldt;
 
 /************ terminal *************/
+
+void edditorRefreshScreen() {
+  // clearning screen the whole screen with excape
+  write(STDOUT_FILENO, "\x1b[2J", 4);
+  // then positioning the cursor to the start at
+  write(STDOUT_FILENO, "\x1b[H", 3);
+}
 void die(char *s) {
+  write(STDOUT_FILENO, "\x1b[2J", 4);
+  write(STDOUT_FILENO, "\x1b[H", 3);
+
   perror(s);
   exit(1);
 }
+
 void exit_raw_mode() {
   if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &oldt) == -1) {
     die("tcsetattr");
   }
 }
+
 void enter_raw_mode() {
   /* tcgetatrr basically takes a file descriptor and puts all the terminal
   settigns in the termios struct which is basically all the settings of
@@ -97,6 +110,34 @@ void enter_raw_mode() {
     die("tcsetattr");
   }
 }
+char edditorReadKey() {
+  int nread;
+  char ch;
+  while ((nread = read(STDIN_FILENO, &ch, 1)) != 1) {
+    if (nread == -1 && errno == EAGAIN)
+      die("faield to read character");
+  }
+  return ch;
+}
+
+void edditorProcessKey() {
+  char ch = edditorReadKey();
+  switch (ch) {
+  case (CTRL_KEY('q')):
+    write(STDOUT_FILENO, "\x1b[2J", 4);
+    write(STDOUT_FILENO, "\x1b[H", 3);
+
+    exit(1);
+    break;
+  case (CTRL_KEY('\n')):
+    write(STDOUT_FILENO, "\x1b[", 4);
+    break;
+  default:
+    write(STDOUT_FILENO, &ch, 1);
+    break;
+  }
+  return;
+}
 
 /************** init ****************/
 int main() {
@@ -105,21 +146,8 @@ int main() {
   // enter continuous , disabling, ctrl+z, etc etc
   // so that it will behave like a text edditor
   enter_raw_mode();
-  char ch;
   while (1) {
-    char ch = '\0';
-    if (read(STDIN_FILENO, &ch, 1) == 1 && errno != EAGAIN) {
-      die("failed to read");
-    }
-    if (iscntrl(ch)) {
-      printf("%d \r\n", ch);
-    } else {
-      printf("%c \r\n", ch);
-      // printf("%d ('%c')/n", ch, ch);
-    }
-    if (ch == 'q') {
-      break;
-    }
+    edditorProcessKey();
   }
   exit_raw_mode();
   return 1;

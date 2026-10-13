@@ -1,11 +1,10 @@
-
 # Systems / Low-Level Engineering Project Roadmap --- Resource Edition
 
 I kept the original 12-project progression and added a focused resource
 stack for each project. The idea is **learn → implement → inspect a real
 implementation → extend your project**.
 
-------------------------------------------------------------------------
+---
 
 ## 🖥️ Category 1: Systems Programming & Operating Systems
 
@@ -28,17 +27,17 @@ process-oriented server tools.
 Pieces**\
 Read the CPU virtualization/processes, concurrency, and persistence
 sections first.\
-https://pages.cs.wisc.edu/\~remzi/OSTEP/ 2. **Harvard CS61 --- Shell
+<https://pages.cs.wisc.edu/\~remzi/OSTEP/> 2. **Harvard CS61 --- Shell
 Exercises**\
 Extremely relevant for implementing `fork`, `exec`, `pipe`, `dup2`,
 `waitpid`, and pipe hygiene.\
-https://cs61.seas.harvard.edu/site/2020/ShellEx/ 3. **MIT xv6**\
+<https://cs61.seas.harvard.edu/site/2020/ShellEx/> 3. **MIT xv6**\
 Read the process, file descriptor, system call, and scheduling
 implementations after your first shell works.\
-https://pdos.csail.mit.edu/6.828/ 4. **Linux man-pages**\
+<https://pdos.csail.mit.edu/6.828/> 4. **Linux man-pages**\
 Use `fork(2)`, `execve(2)`, `pipe(2)`, `dup2(2)`, `waitpid(2)`,
 `open(2)`, `sigaction(2)`, and `setpgid(2)` as your API reference.\
-https://man7.org/linux/man-pages/ 5. **K&R --- The C Programming
+<https://man7.org/linux/man-pages/> 5. **K&R --- The C Programming
 Language**\
 Particularly useful for pointers, arrays, strings, structs, and
 Unix-oriented C.
@@ -46,7 +45,7 @@ Unix-oriented C.
 **Implementation milestones:**
 `command execution → arguments → redirection → pipelines → sequential commands → background jobs → signals → process groups/job control`
 
-------------------------------------------------------------------------
+---
 
 ### =\> Project 2: A User-Space Thread Scheduler (Fibers/Green Threads)
 
@@ -63,25 +62,25 @@ preemption using timers/signals
 This is one of the closest educational exercises to the project. It
 explicitly asks you to implement user-level thread switching and
 save/restore registers.\
-https://pdos.csail.mit.edu/6.828/2021/labs/thread.html 2. **OSTEP ---
+<https://pdos.csail.mit.edu/6.828/2021/labs/thread.html> 2. **OSTEP ---
 Concurrency**\
 Read threads, locks, scheduling, and condition variables.\
-https://pages.cs.wisc.edu/\~remzi/OSTEP/ 3. **MIT xv6 --- Scheduling +
+<https://pages.cs.wisc.edu/\~remzi/OSTEP/> 3. **MIT xv6 --- Scheduling +
 threads source**\
 Excellent reference for understanding the difference between user-level
 and kernel-level scheduling.\
-https://pdos.csail.mit.edu/6.828/ 4. **x86-64 calling
+<https://pdos.csail.mit.edu/6.828/> 4. **x86-64 calling
 convention/register guide**\
 Learn which registers are caller/callee saved and how function calls use
 the stack.\
-https://cs.brown.edu/courses/cs033/docs/guides/x64_cheatsheet.pdf 5.
+<https://cs.brown.edu/courses/cs033/docs/guides/x64_cheatsheet.pdf> 5.
 **Advanced:** read the source of Go's runtime scheduler after your
 implementation works. Don't copy it; use it to compare design decisions.
 
 **Implementation milestones:**
 `thread struct → individual stacks → context struct → switch assembly → yield() → scheduler loop → sleep/wakeup → optional preemption`
 
-------------------------------------------------------------------------
+---
 
 ## 🌐 Category 2: Networking & Distributed Systems
 
@@ -98,25 +97,25 @@ threads/processes/event loops
 
 **Best Resources:** 1. **Beej's Guide to Network Programming**\
 Probably the best hands-on starting point for C socket programming.\
-https://beej.us/guide/bgnet/ 2. **Beej's Guide to Networking Concepts**\
+<https://beej.us/guide/bgnet/> 2. **Beej's Guide to Networking Concepts**\
 Use this before or alongside Beej's socket guide to understand TCP/IP
 and protocols.\
-https://beej.us/guide/bgnet0/ 3. **RFC 9112 --- HTTP/1.1**\
+<https://beej.us/guide/bgnet0/> 3. **RFC 9112 --- HTTP/1.1**\
 Use the RFC as the authoritative protocol reference once your basic
 server works.\
-https://www.rfc-editor.org/rfc/rfc9112.html 4. **OSTEP --- Persistence /
+<https://www.rfc-editor.org/rfc/rfc9112.html> 4. **OSTEP --- Persistence /
 concurrency sections**\
 Useful when you turn the single-client server into a concurrent server.\
-https://pages.cs.wisc.edu/\~remzi/OSTEP/ 5. **Nginx source code ---
+<https://pages.cs.wisc.edu/\~remzi/OSTEP/> 5. **Nginx source code ---
 advanced comparison**\
 After your server works, inspect how a production server structures
 event handling and connection state.\
-https://github.com/nginx/nginx
+<https://github.com/nginx/nginx>
 
 **Implementation milestones:**
 `TCP server → request line → headers → GET → static files → correct status codes → keep-alive → concurrent clients → HTTP edge cases`
 
-------------------------------------------------------------------------
+---
 
 ### =\> Project 4: A Distributed Key-Value Store with Data Replication
 
@@ -132,28 +131,29 @@ Log replication - Terms/epochs - Quorum - Network partitions - Crash
 recovery - State-machine application
 
 **Best Resources:** 1. **Raft --- official site**\
-https://raft.github.io/ 2. **Raft paper --- In Search of an
+<https://raft.github.io/> 2. **Raft paper --- In Search of an
 Understandable Consensus Algorithm**\
 Read this before implementing consensus.\
-https://raft.github.io/raft.pdf 3. **MIT 6.5840 Distributed Systems**\
+<https://raft.github.io/raft.pdf> 3. **MIT 6.5840 Distributed Systems**\
 Especially the Raft lab and later replicated-service work.\
-https://pdos.csail.mit.edu/6.824/ 4. **Designing Data-Intensive
+<https://pdos.csail.mit.edu/6.824/> 4. **Designing Data-Intensive
 Applications --- Martin Kleppmann**\
 Best companion book for understanding replication, partitioning,
 consistency, logs, and distributed-system tradeoffs. 5. **Jepsen**\
 Use it later to learn how distributed systems are actually tested
 against faults and consistency problems.\
-https://jepsen.io/
+<https://jepsen.io/>
 
 **Implementation milestones:**
 `3-node transport → leader election → replicated log → commit index → state machine → persistence → restart recovery → partitions → client retries`
 
-------------------------------------------------------------------------
+---
 
 ## 🗄️ Category 3: Database Internals
 
-### =\> Project 5: A Disk-Backed Log-Structured Merge (LSM) Storage Engine
+### =\> Project 5: building a sqlite like database
 
+<https://cstack.github.io/db_tutorial>.
 **The Project:** Build a database engine that persists key-value records
 to disk using a structured format and efficient indexing.
 
@@ -164,24 +164,24 @@ recovery - Bloom filters - Read/write/space amplification
 **Best Resources:** 1. **RocksDB Overview and Architecture**\
 Study the relationship between memtables, WALs, SST files, and
 compaction.\
-https://github.com/facebook/rocksdb/wiki/RocksDB-Overview 2. **RocksDB
+<https://github.com/facebook/rocksdb/wiki/RocksDB-Overview> 2. **RocksDB
 MemTable documentation**\
-https://github.com/facebook/rocksdb/wiki/MemTable 3. **RocksDB SST/LSM
+<https://github.com/facebook/rocksdb/wiki/MemTable> 3. **RocksDB SST/LSM
 documentation**\
-https://github.com/facebook/rocksdb/wiki/ 4. **Database Internals ---
+<https://github.com/facebook/rocksdb/wiki/> 4. **Database Internals ---
 Alex Petrov**\
 One of the best books for storage engines, B-trees, LSM trees, WALs,
 replication, and database architecture. 5. **SQLite File Format**\
 Even though SQLite is B-tree based rather than an LSM engine, its
 file-format documentation is excellent for learning real-world page
 layouts, offsets, journals, and crash recovery.\
-https://sqlite.org/fileformat.html 6. **SQLite Architecture**\
-https://sqlite.org/arch.html
+<https://sqlite.org/fileformat.html> 6. **SQLite Architecture**\
+<https://sqlite.org/arch.html>
 
 **Implementation milestones:**
 `append-only log → binary record format → recovery scan → memtable → SSTable → sparse index → WAL → compaction → Bloom filter → checksums → crash testing`
 
-------------------------------------------------------------------------
+---
 
 ## 🛠️ Category 4: Software Engineering & Tooling Architecture
 
@@ -197,16 +197,16 @@ Object storage - Diffs - Three-way merge
 **Best Resources:** 1. **Pro Git --- Git Internals**\
 Start with Git objects, references, packfiles, and Git's
 content-addressable model.\
-https://git-scm.com/book/en/v2/Git-Internals-Git-Objects.html 2. **Pro
+<https://git-scm.com/book/en/v2/Git-Internals-Git-Objects.html> 2. **Pro
 Git --- entire book**\
-https://git-scm.com/book/en/v2 3. **Git source code**\
+<https://git-scm.com/book/en/v2> 3. **Git source code**\
 Read it only after you have your simplified implementation working.\
-https://github.com/git/git 4. **Git User Manual / Technical
+<https://github.com/git/git> 4. **Git User Manual / Technical
 Documentation**\
-https://git-scm.com/docs 5. **Git from the Bottom Up**\
+<https://git-scm.com/docs> 5. **Git from the Bottom Up**\
 Useful for developing a mental model of the plumbing commands and object
 database.\
-https://jwiegley.github.io/git-from-the-bottom-up/
+<https://jwiegley.github.io/git-from-the-bottom-up/>
 
 **Implementation milestones:**
 `hash-object → blob storage → tree objects → commits → refs/HEAD → log → checkout → diff → branches → merge → packfiles`
@@ -214,7 +214,7 @@ https://jwiegley.github.io/git-from-the-bottom-up/
 **Important:** Don't begin by implementing Git's entire feature set.
 Build a tiny content-addressed object database first.
 
-------------------------------------------------------------------------
+---
 
 ### =\> Project 7: A Recursive-Descent JSON Parser
 
@@ -227,11 +227,11 @@ escaping - Numeric parsing
 
 **Best Resources:** 1. **RFC 8259 --- JSON**\
 Use the specification as the source of truth.\
-https://www.rfc-editor.org/rfc/rfc8259.html 2. **Crafting Interpreters
+<https://www.rfc-editor.org/rfc/rfc8259.html> 2. **Crafting Interpreters
 --- scanning + parsing chapters**\
-https://craftinginterpreters.com/contents.html 3. **JSONTestSuite**\
+<https://craftinginterpreters.com/contents.html> 3. **JSONTestSuite**\
 Use this to test valid/invalid JSON and edge cases.\
-https://github.com/nst/JSONTestSuite 4. **Crafting a Compiler ---
+<https://github.com/nst/JSONTestSuite> 4. **Crafting a Compiler ---
 recursive descent concepts**\
 Use the parsing material in Crafting Interpreters before moving to a
 full language. 5. **Your own parser tests**\
@@ -241,7 +241,7 @@ whitespace.
 **Implementation milestones:**
 `cursor → whitespace → strings → numbers → literals → arrays → objects → recursive nesting → errors → test suite`
 
-------------------------------------------------------------------------
+---
 
 ## 🤖 Category 5: Compilers, Interpreters & Simulation
 
@@ -258,21 +258,21 @@ Evaluation - Environments - Lexical scope - Closures - Runtime errors
 This should be your primary resource. The tree-walk interpreter section
 goes through scanning, parsing, evaluation, state, control flow,
 functions, binding, and classes.\
-https://craftinginterpreters.com/ 2. **Crafting Interpreters ---
+<https://craftinginterpreters.com/> 2. **Crafting Interpreters ---
 Tree-Walk Interpreter**\
-https://craftinginterpreters.com/a-tree-walk-interpreter.html 3.
+<https://craftinginterpreters.com/a-tree-walk-interpreter.html> 3.
 **Essentials of Programming Languages --- Friedman & Wand**\
 Use later for deeper language-semantics understanding. 4. **Programming
 Language Pragmatics --- Scott**\
 Useful once you want to understand how language implementation choices
 affect semantics and runtime design. 5. **LLVM Kaleidoscope tutorial ---
 advanced next step**\
-https://llvm.org/docs/tutorial/
+<https://llvm.org/docs/tutorial/>
 
 **Implementation milestones:**
 `lexer → parser → AST → evaluator → variables → blocks → if/while → functions → closures → classes → resolver`
 
-------------------------------------------------------------------------
+---
 
 ### =\> Project 9: A CHIP-8 CPU Emulator (Virtual Machine)
 
@@ -284,22 +284,22 @@ Registers - Instruction encoding - Bitmasks/shifts - Timers -
 Input/output - Deterministic emulation
 
 **Best Resources:** 1. **CHIP-8 technical references**\
-https://github.com/mattmikolay/chip-8/wiki/CHIP-8-Technical-Reference 2.
+<https://github.com/mattmikolay/chip-8/wiki/CHIP-8-Technical-Reference> 2.
 **Cowgod's CHIP-8 Technical Reference**\
-http://devernay.free.fr/hacks/chip8/C8TECH10.HTM 3. **Timendus CHIP-8
+<http://devernay.free.fr/hacks/chip8/C8TECH10.HTM> 3. **Timendus CHIP-8
 Test Suite**\
 Use this to validate opcode behavior, flags, quirks, keypad, timers, and
 other compatibility issues.\
-https://github.com/Timendus/chip8-test-suite 4. **Corax+ opcode test
+<https://github.com/Timendus/chip8-test-suite> 4. **Corax+ opcode test
 ROM**\
-https://github.com/corax89/chip8-test-rom 5. **Computer Organization and
+<https://github.com/corax89/chip8-test-rom> 5. **Computer Organization and
 Design --- Patterson & Hennessy**\
 Use for deeper CPU/memory architecture after the emulator works.
 
 **Implementation milestones:**
 `memory → registers → fetch/decode → opcode dispatcher → stack → timers → display → keypad → ROM loading → compatibility tests`
 
-------------------------------------------------------------------------
+---
 
 ## 🧠 Category 6: Advanced Algorithms & Computer Graphics
 
@@ -314,20 +314,20 @@ partitioning - Priority queues - Game-state design
 
 **Best Resources:** 1. **Red Blob Games --- A\* Introduction**\
 Excellent visual explanation of BFS, Dijkstra, greedy search, and A\*.\
-https://www.redblobgames.com/pathfinding/a-star/introduction.html 2.
+<https://www.redblobgames.com/pathfinding/a-star/introduction.html> 2.
 **Red Blob Games --- A\* Implementation**\
-https://www.redblobgames.com/pathfinding/a-star/implementation.html 3.
+<https://www.redblobgames.com/pathfinding/a-star/implementation.html> 3.
 **Roguelike Dev Tutorial**\
-https://rogueliketutorials.com/ 4. **Procedural Dungeon Generation
+<https://rogueliketutorials.com/> 4. **Procedural Dungeon Generation
 resources**\
 Experiment with BSP, cellular automata, drunkard's walk, and
 room/corridor generation. 5. **Game Programming Patterns**\
-https://gameprogrammingpatterns.com/
+<https://gameprogrammingpatterns.com/>
 
 **Implementation milestones:**
 `grid → player movement → random rooms → corridors → connectivity validation → enemies → BFS/Dijkstra → A* → procedural difficulty`
 
-------------------------------------------------------------------------
+---
 
 ### =\> Project 11: A Custom 3D Raycasting Engine (Wolfenstein Style)
 
@@ -342,16 +342,16 @@ Frame buffers - Input/game loops - Performance optimization
 Raycasting**\
 One of the best implementation-oriented explanations, including DDA,
 camera vectors, wall height, and source code.\
-https://lodev.org/cgtutor/raycasting.html 2. **Permadi --- Ray-Casting
+<https://lodev.org/cgtutor/raycasting.html> 2. **Permadi --- Ray-Casting
 Tutorial**\
 A classic explanation of the mathematics and rendering pipeline.\
-https://permadi.com/1996/05/ray-casting-tutorial-table-of-contents/ 3.
+<https://permadi.com/1996/05/ray-casting-tutorial-table-of-contents/> 3.
 **Permadi Raycasting Source/Demos**\
-https://permadi.com/2019/03/ray-casting-source-code-and-demos/ 4.
+<https://permadi.com/2019/03/ray-casting-source-code-and-demos/> 4.
 **LearnOpenGL --- Coordinate Systems**\
 Useful when you later move from a software raycaster toward actual 3D
 graphics.\
-https://learnopengl.com/Getting-Started/Coordinate-Systems 5. **Computer
+<https://learnopengl.com/Getting-Started/Coordinate-Systems> 5. **Computer
 Graphics: Principles and Practice**\
 Use this for deeper graphics mathematics rather than as your first
 implementation guide.
@@ -359,7 +359,7 @@ implementation guide.
 **Implementation milestones:**
 `2D map → player/camera → one ray → DDA → wall distance → vertical wall slice → full screen → movement → collision → textures → floor/ceiling → sprites`
 
-------------------------------------------------------------------------
+---
 
 ## 🔒 Category 7: Cybersecurity & Cryptography
 
@@ -381,21 +381,19 @@ design
 Use it for modern password hashing/KDF guidance. OWASP currently
 recommends Argon2id for password storage and explains why fast hashes
 such as SHA-256 are unsuitable for password hashing.\
-https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html
-2. **Libsodium Password Hashing**\
+<https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html> 2. **Libsodium Password Hashing**\
 Excellent practical reference for Argon2id and password-derived keys.\
-https://doc.libsodium.org/password_hashing/default_phf 3. **Libsodium
+<https://doc.libsodium.org/password_hashing/default_phf> 3. **Libsodium
 AEAD documentation**\
 Learn authenticated encryption rather than implementing AES/ChaCha20
 yourself.\
-https://libsodium.gitbook.io/doc/secret-key_cryptography/aead 4.
+<https://libsodium.gitbook.io/doc/secret-key_cryptography/aead> 4.
 **Libsodium XChaCha20-Poly1305**\
 Particularly useful for a learning vault because it gives authenticated
 encryption with a large nonce and a high-level API.\
-https://libsodium.gitbook.io/doc/secret-key_cryptography/aead/chacha20-poly1305/xchacha20-poly1305_construction
-5. **Cryptopals Crypto Challenges**\
+<https://libsodium.gitbook.io/doc/secret-key_cryptography/aead/chacha20-poly1305/xchacha20-poly1305_construction> 5. **Cryptopals Crypto Challenges**\
 Excellent for learning cryptography by attacking broken constructions.\
-https://cryptopals.com/ 6. **Serious Cryptography --- Jean-Philippe
+<https://cryptopals.com/> 6. **Serious Cryptography --- Jean-Philippe
 Aumasson**\
 Good conceptual book for understanding modern cryptographic primitives.
 
@@ -408,7 +406,7 @@ nonces incorrectly. - Don't store the master password. - Don't silently
 accept authentication failures. - Don't use the project to store real
 credentials until the design has been professionally reviewed.
 
-------------------------------------------------------------------------
+---
 
 # Recommended Order
 
@@ -416,15 +414,15 @@ If the goal is to become genuinely strong at low-level/backend/system
 design rather than simply collect projects, I would build them in this
 order:
 
-1.  **Mini Shell**
-2.  **User-Space Threads**
-3.  **Raw-Socket HTTP Server**
-4.  **CHIP-8 Emulator**
-5.  **JSON Parser**
-6.  **Mini-Git**
-7.  **LSM Storage Engine**
-8.  **Tree-Walking Interpreter**
-9.  **Roguelike + A**\*
+1. **Mini Shell**
+2. **User-Space Threads**
+3. **Raw-Socket HTTP Server**
+4. **CHIP-8 Emulator**
+5. **JSON Parser**
+6. **Mini-Git**
+7. **LSM Storage Engine**
+8. **Tree-Walking Interpreter**
+9. **Roguelike + A**\*
 10. **Raycasting Engine**
 11. **Distributed KV Store + Raft**
 12. **Password Manager**
@@ -437,17 +435,16 @@ algorithms/graphics → distributed systems → security**.
 
 For each project:
 
-1.  **Read only enough theory to understand the next implementation
-    step.**
-2.  **Build the smallest working version.**
-3.  **Write tests before adding major features.**
-4.  **Read a real implementation after your own version works.**
-5.  **Use the real implementation to discover better designs, not to
-    copy code.**
-6.  **Add one serious failure-mode test.**
-7.  **Document the architecture and tradeoffs in the repository.**
+1. **Read only enough theory to understand the next implementation
+   step.**
+2. **Build the smallest working version.**
+3. **Write tests before adding major features.**
+4. **Read a real implementation after your own version works.**
+5. **Use the real implementation to discover better designs, not to
+   copy code.**
+6. **Add one serious failure-mode test.**
+7. **Document the architecture and tradeoffs in the repository.**
 
 The most valuable outcome is not the final code. It is being able to
 explain, from first principles, **why every major component exists and
 what breaks when you remove it.**
-
