@@ -1,22 +1,41 @@
 /************ Includes *************/
+#include <asm-generic/ioctls.h>
 #include <ctype.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/ioctl.h>
 #include <termios.h>
 #include <unistd.h>
-
 #define CTRL_KEY(k) ((k) & 0x1f)
 /************ data *****************/
-static struct termios oldt;
+struct edditorConfig {
+  int edditorRows;
+  int edditorCols;
+  struct termios oldt;
+};
 
+struct edditorConfig E;
 /************ terminal *************/
-
+void drawRows() {
+  int y;
+  for (int i = 0; i < E.edditorRows; i++) {
+    write(STDOUT_FILENO, "~", 3);
+    if (y < E.edditorRows - 1) {
+      write(STDOUT_FILENO, "\r\n", 2);
+    }
+  }
+}
 void edditorRefreshScreen() {
   // clearning screen the whole screen with excape
   write(STDOUT_FILENO, "\x1b[2J", 4);
   // then positioning the cursor to the start at
+  write(STDOUT_FILENO, "\x1b[H", 3);
+
+  // here we willl draw the tildes to make it look
+  // like we are in an edditor like feeling
+  drawRows();
   write(STDOUT_FILENO, "\x1b[H", 3);
 }
 void die(char *s) {
@@ -28,7 +47,7 @@ void die(char *s) {
 }
 
 void exit_raw_mode() {
-  if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &oldt) == -1) {
+  if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &E.oldt) == -1) {
     die("tcsetattr");
   }
 }
@@ -51,7 +70,7 @@ void enter_raw_mode() {
     STDERR_FILENO               2               Standard error
 
   */
-  tcgetattr(STDIN_FILENO, &oldt);
+  tcgetattr(STDIN_FILENO, &E.oldt);
   /* when main will exit it will basically call
    * exit_raw_mode so that the terminal settings go
    * back to original
@@ -62,7 +81,7 @@ void enter_raw_mode() {
   // current settings cause oldt has bee declared a
   // global for basically changing the terminal
   // settings to original after we exit the mode
-  struct termios rawtermios = oldt;
+  struct termios rawtermios = E.oldt;
 
   rawtermios.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
   /*inverting the c_iflag which will disable input
@@ -139,6 +158,54 @@ void edditorProcessKey() {
   return;
 }
 
+int getCursorPosition(int *rows, int *cols) {
+  char buff[32];
+  unsigned int i = 1;
+  if (write(STDOUT_FILENO, "\x1b[9n", 4) != 4) {
+    return -1;
+  }
+  printf("\r\n");
+
+  while (i < sizeof(buff)) {
+    if (read(STDIN_FILENO, &buff, 1) != 1) {
+      break;
+    }
+    if (buff[i] == 'R') {
+      break;
+    }
+    i++;
+  }
+  buff[i] = '\0';
+  if (buff[0] != '\x1b' || buff[1] != '[') {
+    return -1;
+  }
+  if (sscanf(&buff[2], "%d;%d", rows, cols) != 1) {
+    return -1;
+  }
+  printf("\r\n &buff[1]: %s\r\n", &buff[1]);
+  edditorReadKey();
+  return 0;
+}
+int getWindowSize(int *rows, int *cols) {
+  struct winsize ws;
+  if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0) {
+    if (write(STDOUT_FILENO, "\x1b[999C\x1b[999B", 12) != 12)
+      return -1;
+    getCursorPosition(rows, cols);
+    return -1;
+  } else {
+    *cols = ws.ws_col;
+    *rows = ws.ws_row;
+    return 0;
+  }
+}
+void initEdditor() {
+  if (getWindowSize(&E.edditorRows, &E.edditorCols) == -1) {
+    printf("no of cols: %d \r\n no of rows: %d \r\n", E.edditorCols,
+           E.edditorRows);
+    die("getScreenSize");
+  }
+}
 /************** init ****************/
 int main() {
   // first we will enter raw_mode which will
@@ -146,7 +213,9 @@ int main() {
   // enter continuous , disabling, ctrl+z, etc etc
   // so that it will behave like a text edditor
   enter_raw_mode();
+  initEdditor();
   while (1) {
+    edditorRefreshScreen();
     edditorProcessKey();
   }
   exit_raw_mode();
