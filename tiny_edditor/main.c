@@ -10,6 +10,18 @@
 #define CTRL_KEY(k) ((k) & 0x1f)
 #define NEW_ABUFF {NULL, 0}
 #define TINY_VERSION "0.0.1"
+
+enum edditorKeys {
+  ARROW_LEFT = 1000,
+  ARROW_RIGHT,
+  ARROW_UP,
+  ARROW_DOWN,
+  PAGE_UP,
+  PAGE_DOWN,
+  HOME,
+  DEL
+};
+
 /** dyanmic strings**/
 struct abuff {
   char *str;
@@ -33,6 +45,8 @@ void abuffFree(struct abuff *ab) {
 }
 /************ data *****************/
 struct edditorConfig {
+  int cx;
+  int cy;
   int edditorRows;
   int edditorCols;
   struct termios oldt;
@@ -77,6 +91,11 @@ void edditorRefreshScreen() {
   // then positioning the cursor to the start at
   abuffAppend(&ab, "\x1b[H", 3);
 
+  // normalize the cx and cy from 0 based to 1
+  // based indexing
+  char buff[32];
+  snprintf(buff, sizeof(buff), "\x1b[%d:%dH", E.cx + 1, E.cy + 1);
+  abuffAppend(&ab, buff, strlen(buff));
   // here we willl draw the tildes to make it look
   // like we are in an edditor like feeling
   drawRows(&ab);
@@ -176,24 +195,71 @@ void enter_raw_mode() {
     die("tcsetattr");
   }
 }
-char edditorReadKey() {
+
+void moveCursor(int ch) {
+  switch (ch) {
+  case ARROW_UP:
+    if (E.cy != 0)
+      E.cy--;
+    break;
+  case ARROW_LEFT:
+    if (E.cx != 0)
+      E.cx--;
+    break;
+  case ARROW_DOWN:
+    if (E.cy < E.edditorCols)
+      E.cy++;
+    break;
+  case ARROW_RIGHT:
+    if (E.cx < E.edditorRows)
+      E.cx++;
+    break;
+  }
+}
+int edditorReadKey() {
   int nread;
   char ch;
   while ((nread = read(STDIN_FILENO, &ch, 1)) != 1) {
     if (nread == -1 && errno == EAGAIN)
       die("faield to read character");
+    char seq[3];
+    if (ch == '\x1b') {
+      if (read(STDIN_FILENO, &seq, 1) != 1)
+        return '\x1b';
+      if (read(STDIN_FILENO, &seq, 1) != 1)
+        return '\x1b';
+
+      if (seq[0] != '[') {
+        switch (seq[1]) {
+        case ('A'):
+          return ARROW_UP;
+        case ('B'):
+          return ARROW_DOWN;
+        case ('C'):
+          return ARROW_RIGHT;
+        case ('D'):
+          return ARROW_LEFT;
+        }
+      }
+    }
   }
   return ch;
 }
 
 void edditorProcessKey() {
-  char ch = edditorReadKey();
+  int ch = edditorReadKey();
   switch (ch) {
   case (CTRL_KEY('q')):
     write(STDOUT_FILENO, "\x1b[2J", 4);
     write(STDOUT_FILENO, "\x1b[H", 3);
 
     exit(1);
+    break;
+  case ARROW_UP:
+  case ARROW_LEFT:
+  case ARROW_DOWN:
+  case ARROW_RIGHT:
+    moveCursor(ch);
     break;
   case (CTRL_KEY('\n')):
     write(STDOUT_FILENO, "\x1b[", 2);
@@ -247,6 +313,10 @@ int getWindowSize(int *rows, int *cols) {
   }
 }
 void initEdditor() {
+  // initialize x and y corordinates of the cursor
+  // to 0;
+  E.cx = 0;
+  E.cy = 0;
   if (getWindowSize(&E.edditorRows, &E.edditorCols) == -1) {
     printf("no of cols: %d \r\n no of rows: %d \r\n", E.edditorCols,
            E.edditorRows);
