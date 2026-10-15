@@ -1,5 +1,4 @@
 /************ Includes *************/
-#include <asm-generic/ioctls.h>
 #include <ctype.h>
 #include <errno.h>
 #include <stdio.h>
@@ -9,6 +8,29 @@
 #include <termios.h>
 #include <unistd.h>
 #define CTRL_KEY(k) ((k) & 0x1f)
+#define NEW_ABUFF {NULL, 0}
+#define TINY_VERSION "0.0.1"
+/** dyanmic strings**/
+struct abuff {
+  char *str;
+  int len;
+};
+
+void abuffAppend(struct abuff *ab, char *s, int len) {
+  char *new = realloc(ab->str, ab->len + len);
+  if (new == NULL) {
+    return;
+  }
+  memcpy(&new[ab->len], s, len);
+  ab->str = new;
+  ab->len += len;
+}
+
+void abuffFree(struct abuff *ab) {
+  free(ab->str);
+  ab->str = NULL;
+  ab->len = 0;
+}
 /************ data *****************/
 struct edditorConfig {
   int edditorRows;
@@ -18,25 +40,50 @@ struct edditorConfig {
 
 struct edditorConfig E;
 /************ terminal *************/
-void drawRows() {
-  int y;
+void drawRows(struct abuff *ab) {
   for (int i = 0; i < E.edditorRows; i++) {
-    write(STDOUT_FILENO, "~", 3);
-    if (y < E.edditorRows - 1) {
-      write(STDOUT_FILENO, "\r\n", 2);
+    if (i == E.edditorRows / 3) {
+      char welcome[80];
+      int welcomeLen = snprintf(welcome, sizeof(welcome),
+                                "Tiny Editor -- version %s", TINY_VERSION);
+      if (welcomeLen > E.edditorCols) {
+        welcomeLen = E.edditorCols;
+      }
+      int padding = (E.edditorCols - welcomeLen) / 2;
+      if (padding) {
+        abuffAppend(ab, "~", 1);
+        padding--;
+      }
+      while (padding--) {
+        abuffAppend(ab, " ", 1);
+      }
+      abuffAppend(ab, welcome, welcomeLen);
+    } else {
+      abuffAppend(ab, "~", 1);
+    }
+    // clearning screen below the cursor with excape sequence
+    abuffAppend(ab, "\x1b[K", 3);
+
+    if (i < E.edditorRows - 1) {
+      abuffAppend(ab, "\r\n", 2);
     }
   }
 }
 void edditorRefreshScreen() {
-  // clearning screen the whole screen with excape
-  write(STDOUT_FILENO, "\x1b[2J", 4);
+
+  struct abuff ab = NEW_ABUFF;
+  // hide the cursor with the below escape sequence
+  abuffAppend(&ab, "\x1b[?25l", 6);
   // then positioning the cursor to the start at
-  write(STDOUT_FILENO, "\x1b[H", 3);
+  abuffAppend(&ab, "\x1b[H", 3);
 
   // here we willl draw the tildes to make it look
   // like we are in an edditor like feeling
-  drawRows();
-  write(STDOUT_FILENO, "\x1b[H", 3);
+  drawRows(&ab);
+  abuffAppend(&ab, "\x1b[H", 3);
+  abuffAppend(&ab, "\x1b[?25h", 6);
+  write(STDOUT_FILENO, ab.str, ab.len);
+  abuffFree(&ab);
 }
 void die(char *s) {
   write(STDOUT_FILENO, "\x1b[2J", 4);
@@ -149,7 +196,7 @@ void edditorProcessKey() {
     exit(1);
     break;
   case (CTRL_KEY('\n')):
-    write(STDOUT_FILENO, "\x1b[", 4);
+    write(STDOUT_FILENO, "\x1b[", 2);
     break;
   default:
     write(STDOUT_FILENO, &ch, 1);
@@ -179,7 +226,7 @@ int getCursorPosition(int *rows, int *cols) {
   if (buff[0] != '\x1b' || buff[1] != '[') {
     return -1;
   }
-  if (sscanf(&buff[2], "%d;%d", rows, cols) != 1) {
+  if (sscanf(&buff[2], "%d;%d", rows, cols) != 2) {
     return -1;
   }
   printf("\r\n &buff[1]: %s\r\n", &buff[1]);
