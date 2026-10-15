@@ -19,6 +19,7 @@ enum edditorKeys {
   PAGE_UP,
   PAGE_DOWN,
   HOME,
+  END,
   DEL
 };
 
@@ -236,14 +237,28 @@ int edditorReadKey() {
             return '\x1b';
           else if (seq[2] == '~') {
             switch (seq[1]) {
+            case (1):
+              return HOME;
+            case (4):
+              return END;
+            case (8):
+              return END;
+            case (7):
+              return HOME;
             case (5):
               return PAGE_UP;
             case (6):
               return PAGE_DOWN;
+            case (3):
+              return DEL;
             }
           }
         } else {
           switch (seq[1]) {
+          case ('H'):
+            return HOME;
+          case ('F'):
+            return END;
           case ('A'):
             return ARROW_UP;
           case ('B'):
@@ -253,6 +268,13 @@ int edditorReadKey() {
           case ('D'):
             return ARROW_LEFT;
           }
+        }
+      } else if (seq[0] == 'O') {
+        switch (seq[1]) {
+        case ('H'):
+          return HOME;
+        case ('F'):
+          return END;
         }
       }
     }
@@ -268,6 +290,12 @@ void edditorProcessKey() {
     write(STDOUT_FILENO, "\x1b[H", 3);
 
     exit(1);
+    break;
+  case HOME:
+    E.cx = 0;
+    break;
+  case END:
+    E.cx = E.edditorRows - 1;
     break;
   case PAGE_UP:
   case PAGE_DOWN:
