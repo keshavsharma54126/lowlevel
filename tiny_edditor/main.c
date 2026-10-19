@@ -246,12 +246,12 @@ void moveCursor(int ch) {
       E.cy--;
     break;
   case ARROW_LEFT:
-    if (E.cx == 0) {
+
+    if (E.cx == 0 && E.cy - 1 >= 0) {
       E.cy--;
       row = (E.cy >= E.noOfRows) ? NULL : &E.rows[E.cy];
       E.cx = row->size;
-    }
-    if (E.cx != 0)
+    } else if (E.cx != 0)
       E.cx--;
     break;
   case ARROW_DOWN:
@@ -260,11 +260,10 @@ void moveCursor(int ch) {
     break;
   case ARROW_RIGHT:
 
-    if (E.cx == row->size) {
+    if (row && E.cx == row->size) {
       E.cy++;
       E.cx = 0;
-    }
-    if (row && E.cx < row->size)
+    } else if (row && E.cx < row->size)
       E.cx++;
     break;
   }
