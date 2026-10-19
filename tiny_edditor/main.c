@@ -1,10 +1,15 @@
 /************ Includes *************/
-#include <ctype.h>
+
+#define _DEFAULT_SOURCE
+#define _BSD_SOURCE
+#define _GNU_SOURCE
+
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/ioctl.h>
+#include <sys/types.h>
 #include <termios.h>
 #include <unistd.h>
 #define CTRL_KEY(k) ((k) & 0x1f)
@@ -45,11 +50,19 @@ void abuffFree(struct abuff *ab) {
   ab->len = 0;
 }
 /************ data *****************/
+typedef struct erow {
+  char *chars;
+  int size;
+} erow;
 struct edditorConfig {
   int cx;
   int cy;
+  int rowoff;
+  int colOff;
   int edditorRows;
   int edditorCols;
+  int noOfRows;
+  erow *rows;
   struct termios oldt;
 };
 
@@ -57,25 +70,36 @@ struct edditorConfig E;
 /************ terminal *************/
 void drawRows(struct abuff *ab) {
   for (int i = 0; i < E.edditorRows; i++) {
-    if (i == E.edditorRows / 3) {
-      char welcome[80];
-      int welcomeLen = snprintf(welcome, sizeof(welcome),
-                                "Tiny Editor -- version %s", TINY_VERSION);
-      if (welcomeLen > E.edditorCols) {
-        welcomeLen = E.edditorCols;
-      }
-      int padding = (E.edditorCols - welcomeLen) / 2;
-      if (padding) {
+    int filerow = i + E.rowoff;
+    if (filerow >= E.noOfRows) {
+      if (E.noOfRows == 0 && i == E.edditorRows / 3) {
+        char welcome[80];
+        int welcomeLen = snprintf(welcome, sizeof(welcome),
+                                  "Tiny Editor -- version %s", TINY_VERSION);
+        if (welcomeLen > E.edditorCols) {
+          welcomeLen = E.edditorCols;
+        }
+        int padding = (E.edditorCols - welcomeLen) / 2;
+        if (padding) {
+          abuffAppend(ab, "~", 1);
+          padding--;
+        }
+        while (padding--) {
+          abuffAppend(ab, " ", 1);
+        }
+        abuffAppend(ab, welcome, welcomeLen);
+      } else {
         abuffAppend(ab, "~", 1);
-        padding--;
       }
-      while (padding--) {
-        abuffAppend(ab, " ", 1);
-      }
-      abuffAppend(ab, welcome, welcomeLen);
     } else {
-      abuffAppend(ab, "~", 1);
+      int len = E.rows[filerow].size - E.colOff;
+      if (len < 0)
+        len = 0;
+      if (E.rows[filerow].size > E.edditorCols)
+        len = E.edditorCols;
+      abuffAppend(ab, &E.rows[filerow].chars[E.colOff], len);
     }
+
     // clearning screen below the cursor with excape sequence
     abuffAppend(ab, "\x1b[K", 3);
 
@@ -84,23 +108,40 @@ void drawRows(struct abuff *ab) {
     }
   }
 }
-void edditorRefreshScreen() {
 
+void edditorScroll() {
+  if (E.cy < E.rowoff) {
+    E.rowoff = E.cy;
+  }
+  if (E.cy >= E.rowoff + E.edditorRows) {
+    E.rowoff = E.cy - E.edditorRows + 1;
+  }
+
+  if (E.cx < E.colOff) {
+    E.colOff = E.cx;
+  }
+  if (E.cx >= E.colOff + E.edditorCols) {
+    E.colOff = E.cx - E.edditorCols + 1;
+  }
+}
+void edditorRefreshScreen() {
+  edditorScroll();
   struct abuff ab = NEW_ABUFF;
   // hide the cursor with the below escape sequence
   abuffAppend(&ab, "\x1b[?25l", 6);
   // then positioning the cursor to the start at
   abuffAppend(&ab, "\x1b[H", 3);
+  // here we willl draw the tildes to make it look
+  // like we are in an edditor like feeling
 
+  drawRows(&ab);
   // normalize the cx and cy from 0 based to 1
   // based indexing
   char buff[32];
-  snprintf(buff, sizeof(buff), "\x1b[%d:%dH", E.cx + 1, E.cy + 1);
+  snprintf(buff, sizeof(buff), "\x1b[%d;%dH", (E.cy - E.rowoff) + 1,
+           (E.cx - E.colOff + 1));
+
   abuffAppend(&ab, buff, strlen(buff));
-  // here we willl draw the tildes to make it look
-  // like we are in an edditor like feeling
-  drawRows(&ab);
-  abuffAppend(&ab, "\x1b[H", 3);
   abuffAppend(&ab, "\x1b[?25h", 6);
   write(STDOUT_FILENO, ab.str, ab.len);
   abuffFree(&ab);
@@ -198,23 +239,39 @@ void enter_raw_mode() {
 }
 
 void moveCursor(int ch) {
+  erow *row = (E.cy >= E.noOfRows) ? NULL : &E.rows[E.cy];
   switch (ch) {
   case ARROW_UP:
     if (E.cy != 0)
       E.cy--;
     break;
   case ARROW_LEFT:
+    if (E.cx == 0) {
+      E.cy--;
+      row = (E.cy >= E.noOfRows) ? NULL : &E.rows[E.cy];
+      E.cx = row->size;
+    }
     if (E.cx != 0)
       E.cx--;
     break;
   case ARROW_DOWN:
-    if (E.cy < E.edditorCols)
+    if (E.cy < E.noOfRows)
       E.cy++;
     break;
   case ARROW_RIGHT:
-    if (E.cx < E.edditorRows)
+
+    if (E.cx == row->size) {
+      E.cy++;
+      E.cx = 0;
+    }
+    if (row && E.cx < row->size)
       E.cx++;
     break;
+  }
+  row = (E.cy >= E.noOfRows) ? NULL : &E.rows[E.cy];
+  int rowlen = row ? row->size : 0;
+  if (E.cx > rowlen) {
+    E.cx = rowlen;
   }
 }
 
@@ -222,63 +279,65 @@ int edditorReadKey() {
   int nread;
   char ch;
   while ((nread = read(STDIN_FILENO, &ch, 1)) != 1) {
-    if (nread == -1 && errno == EAGAIN)
+    if (nread == -1 && errno != EAGAIN)
       die("faield to read character");
-    char seq[3];
-    if (ch == '\x1b') {
-      if (read(STDIN_FILENO, &seq, 1) != 1)
-        return '\x1b';
-      if (read(STDIN_FILENO, &seq, 1) != 1)
-        return '\x1b';
+  }
+  char seq[3];
+  if (ch == '\x1b') {
+    if (read(STDIN_FILENO, &seq[0], 1) != 1)
+      return '\x1b';
+    if (read(STDIN_FILENO, &seq[1], 1) != 1)
+      return '\x1b';
 
-      if (seq[0] != '[') {
-        if (seq[1] > '0' && seq[1] < '9') {
-          if (read(STDIN_FILENO, &seq, 1) != 1)
-            return '\x1b';
-          else if (seq[2] == '~') {
-            switch (seq[1]) {
-            case (1):
-              return HOME;
-            case (4):
-              return END;
-            case (8):
-              return END;
-            case (7):
-              return HOME;
-            case (5):
-              return PAGE_UP;
-            case (6):
-              return PAGE_DOWN;
-            case (3):
-              return DEL;
-            }
-          }
-        } else {
+    if (seq[0] == '[') {
+      if (seq[1] >= '0' && seq[1] <= '9') {
+        if (read(STDIN_FILENO, &seq[2], 1) != 1)
+          return '\x1b';
+        else if (seq[2] == '~') {
           switch (seq[1]) {
-          case ('H'):
+          case ('1'):
             return HOME;
-          case ('F'):
+          case ('4'):
             return END;
-          case ('A'):
-            return ARROW_UP;
-          case ('B'):
-            return ARROW_DOWN;
-          case ('C'):
-            return ARROW_RIGHT;
-          case ('D'):
-            return ARROW_LEFT;
+          case ('8'):
+            return END;
+          case ('7'):
+            return HOME;
+          case ('5'):
+            return PAGE_UP;
+          case ('6'):
+            return PAGE_DOWN;
+          case ('3'):
+            return DEL;
           }
         }
-      } else if (seq[0] == 'O') {
+      } else {
         switch (seq[1]) {
         case ('H'):
           return HOME;
         case ('F'):
           return END;
+        case ('A'):
+          return ARROW_UP;
+        case ('B'):
+          return ARROW_DOWN;
+        case ('C'):
+          return ARROW_RIGHT;
+        case ('D'):
+          return ARROW_LEFT;
         }
       }
+    } else if (seq[0] == 'O') {
+      switch (seq[1]) {
+      case ('H'):
+        return HOME;
+      case ('F'):
+        return END;
+      }
     }
+    return '\x1b';
   }
+
   return ch;
 }
 
@@ -295,14 +354,15 @@ void edditorProcessKey() {
     E.cx = 0;
     break;
   case END:
-    E.cx = E.edditorRows - 1;
+    E.cx = (E.cy < E.edditorRows) ? E.rows[E.cy].size : 0;
     break;
   case PAGE_UP:
   case PAGE_DOWN:
     int moves = E.edditorRows;
     while (moves--) {
-      moveCursor(ch = PAGE_DOWN ? ARROW_DOWN : ARROW_UP);
+      moveCursor(ch == PAGE_DOWN ? ARROW_DOWN : ARROW_UP);
     }
+    break;
   case ARROW_UP:
   case ARROW_LEFT:
   case ARROW_DOWN:
@@ -328,7 +388,7 @@ int getCursorPosition(int *rows, int *cols) {
   printf("\r\n");
 
   while (i < sizeof(buff)) {
-    if (read(STDIN_FILENO, &buff, 1) != 1) {
+    if (read(STDIN_FILENO, &buff[i], 1) != 1) {
       break;
     }
     if (buff[i] == 'R') {
@@ -360,11 +420,44 @@ int getWindowSize(int *rows, int *cols) {
     return 0;
   }
 }
+
+// append rows to the edditor file rows
+void appendRows(char *s, size_t len) {
+  E.rows = realloc(E.rows, sizeof(erow) * (E.noOfRows + 1));
+  int currRow = E.noOfRows;
+  E.rows[currRow].size = len;
+  E.rows[currRow].chars = malloc(len + 1);
+  memcpy(E.rows[currRow].chars, s, len);
+  E.rows[currRow].chars[len] = '\0';
+  E.noOfRows++;
+}
+// open a file
+void openFileInEdditor(const char *filename) {
+  FILE *fp = fopen(filename, "r");
+  if (!fp) {
+    die("fopen");
+  }
+  char *line = NULL;
+  size_t linecap = 0;
+  size_t lineLength;
+  while ((lineLength = getline(&line, &linecap, fp)) != -1) {
+    while (lineLength > 0 &&
+           (line[lineLength - 1] == '\r' || line[lineLength - 1] == '\n')) {
+      lineLength--;
+    }
+    appendRows(line, lineLength);
+  }
+  free(line);
+  fclose(fp);
+}
 void initEdditor() {
   // initialize x and y corordinates of the cursor
   // to 0;
   E.cx = 0;
   E.cy = 0;
+  E.noOfRows = 0;
+  E.colOff = 0;
+  E.rows = NULL;
   if (getWindowSize(&E.edditorRows, &E.edditorCols) == -1) {
     printf("no of cols: %d \r\n no of rows: %d \r\n", E.edditorCols,
            E.edditorRows);
@@ -372,13 +465,17 @@ void initEdditor() {
   }
 }
 /************** init ****************/
-int main() {
+int main(int argc, char *argv[]) {
   // first we will enter raw_mode which will
   // basically make sure that the iput goes without
   // enter continuous , disabling, ctrl+z, etc etc
   // so that it will behave like a text edditor
+
   enter_raw_mode();
   initEdditor();
+  if (argc >= 2) {
+    openFileInEdditor(argv[1]);
+  }
   while (1) {
     edditorRefreshScreen();
     edditorProcessKey();
