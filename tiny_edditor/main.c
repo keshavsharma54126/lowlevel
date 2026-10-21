@@ -3,7 +3,6 @@
 #define _DEFAULT_SOURCE
 #define _BSD_SOURCE
 #define _GNU_SOURCE
-
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,6 +14,7 @@
 #define CTRL_KEY(k) ((k) & 0x1f)
 #define NEW_ABUFF {NULL, 0}
 #define TINY_VERSION "0.0.1"
+#define _KILO_TAB_SIZE 8
 
 enum edditorKeys {
   ARROW_LEFT = 1000,
@@ -53,6 +53,8 @@ void abuffFree(struct abuff *ab) {
 typedef struct erow {
   char *chars;
   int size;
+  char *render;
+  int rsize;
 } erow;
 struct edditorConfig {
   int cx;
@@ -92,12 +94,12 @@ void drawRows(struct abuff *ab) {
         abuffAppend(ab, "~", 1);
       }
     } else {
-      int len = E.rows[filerow].size - E.colOff;
+      int len = E.rows[filerow].rsize - E.colOff;
       if (len < 0)
         len = 0;
       if (E.rows[filerow].size > E.edditorCols)
         len = E.edditorCols;
-      abuffAppend(ab, &E.rows[filerow].chars[E.colOff], len);
+      abuffAppend(ab, &E.rows[filerow].render[E.colOff], len);
     }
 
     // clearning screen below the cursor with excape sequence
@@ -419,7 +421,33 @@ int getWindowSize(int *rows, int *cols) {
     return 0;
   }
 }
+// update the appended rows according to teh new
+// render text
 
+void updateAppendedRows(erow *row) {
+  int tabs = 0;
+  for (int j = 0; j < row->size; j++) {
+    if (row->chars[j] == '\t') {
+      tabs++;
+    }
+  }
+  free(row->render);
+  row->render = malloc(row->size + tabs * (_KILO_TAB_SIZE - 1) + 1);
+
+  int idx = 0;
+  for (int j = 0; j < row->size; j++) {
+    if (row->chars[j] == '\t') {
+      row->render[idx++] = ' ';
+      while (idx % _KILO_TAB_SIZE != 0) {
+        row->render[idx++] = ' ';
+      }
+    } else {
+      row->render[idx++] = row->chars[j];
+    }
+  }
+  row->render[idx] = '\0';
+  row->rsize = idx;
+}
 // append rows to the edditor file rows
 void appendRows(char *s, size_t len) {
   E.rows = realloc(E.rows, sizeof(erow) * (E.noOfRows + 1));
@@ -428,6 +456,9 @@ void appendRows(char *s, size_t len) {
   E.rows[currRow].chars = malloc(len + 1);
   memcpy(E.rows[currRow].chars, s, len);
   E.rows[currRow].chars[len] = '\0';
+  E.rows[currRow].rsize = 0;
+  E.rows[currRow].render = NULL;
+  updateAppendedRows(&E.rows[currRow]);
   E.noOfRows++;
 }
 // open a file
