@@ -27,7 +27,6 @@ enum edditorKeys {
   END,
   DEL
 };
-
 /** dyanmic strings**/
 struct abuff {
   char *str;
@@ -56,6 +55,7 @@ typedef struct erow {
   char *render;
   int rsize;
 } erow;
+
 struct edditorConfig {
   int cx;
   int cy;
