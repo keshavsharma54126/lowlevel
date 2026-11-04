@@ -1,0 +1,5 @@
+-Wall
+-std=gnu99
+-O2
+-I.
+-I/opt/homebrew/include
