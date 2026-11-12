@@ -3,17 +3,23 @@
 #define RAYGUI_IMPLEMENTATION
 #include "raygui.h"
 
-// typedef struct Color {
-//   unsigned char r; // Color red value
-//   unsigned char g; // Color green value
-//   unsigned char b; // Color blue value
-//   unsigned char a; // Color alpha value
-// } Color;
-//
 #define WIDTH 1000
 #define HEIGHT 1000
 
 int FontSize = 18;
+int ContentFontSize = 18;
+// todo settings struct might add things to it later
+typedef struct Settigns {
+  bool settingsOpen;
+  float fontSize;
+  Color bgColor;
+  float opacity;
+  bool darkMode;
+  bool showCompleted;
+  int themeIndex;
+  bool themeEditMode;
+  Font customFont;
+} Settings;
 
 void SetDefaultStyles() {
   GuiSetStyle(DEFAULT, TEXT_SIZE, FontSize);
@@ -30,26 +36,34 @@ void SetDefaultStyles() {
   GuiSetStyle(BUTTON, BORDER_COLOR_NORMAL, ColorToInt(BLACK));
 }
 int main() {
+
+  SetConfigFlags(FLAG_WINDOW_TRANSPARENT);
+
+  Font customFont = LoadFont("./fonts/monospace/MonoSpace-Bold.ttf");
+  const Settings defaultConfig = {false, 18, BLACK, 1,         true,
+                                  true,  0,  false, customFont};
+  Settings setting = defaultConfig;
+  setting.customFont = customFont;
   InitWindow(WIDTH, HEIGHT, "Todo List ");
   SetTargetFPS(60);
-  Font customFont = LoadFont("./fonts/monospace/SpaceMono-Bold.ttf");
   GuiSetFont(customFont);
-  Color BackgroundColor = {.r = 32, .g = 32, .b = 32, .a = 100};
-  bool showColorPallete = false;
+  bool settingsOpen = false;
 
   SetExitKey(KEY_NULL);
 
   bool exitWindow = false;
   bool showExitPrompt = false;
-  bool clickedYes = false;
   while (!exitWindow) {
     if (WindowShouldClose()) {
       showExitPrompt = true;
     }
     BeginDrawing();
-    ClearBackground(BackgroundColor);
-    SetDefaultStyles();
+    ClearBackground(Fade(setting.bgColor, setting.opacity));
 
+    Rectangle screenRect = {0, 0, (float)GetScreenWidth(),
+                            (float)GetScreenHeight()};
+    DrawRectangleLinesEx(screenRect, 0.2f, RAYWHITE);
+    SetDefaultStyles();
     // show exit promtp and confirm if
     // showExitPrompt is true
     if (showExitPrompt) {
@@ -71,20 +85,60 @@ int main() {
         showExitPrompt = false;
       }
     }
+    int btnActive = 0;
+    bool secretViewActive = true;
+    char *todoText = "";
+    GuiSetStyle(DEFAULT, TEXT_SIZE, setting.fontSize);
+    GuiTextInputBox((Rectangle){WIDTH / 4.00, 50, WIDTH / 2.00, 100}, "Todos",
+                    "", todoText, 10, "create", &btnActive, &secretViewActive);
 
-    if (GuiButton((Rectangle){WIDTH - 140, 10, 120, 40}, "#191# Settings"))
-      showColorPallete = !showColorPallete;
+    GuiSetStyle(DEFAULT, TEXT_SIZE, FontSize);
+    if (GuiButton((Rectangle){WIDTH - 140, 10, 120, 40}, "#142# Settings"))
+      settingsOpen = !settingsOpen;
 
-    if (showColorPallete) {
-      int btnActive = -1;
+    if (settingsOpen) {
+      Rectangle win = {WIDTH - 420, 60, 400, 360};
+      float x = win.x + 20;
+      float w = win.width - 40;
+      float y = win.y + 40;
 
-      GuiMessageBox((Rectangle){WIDTH - 260, 50, 250, 100}, "#191#Message Box",
-                    "Hi! This is a message!", "Nice;Cool;Ok", &btnActive);
+      if (setting.themeEditMode)
+        GuiLock();
 
-      if (btnActive >= 0)
-        showColorPallete = false;
+      if (GuiWindowBox(win, "#142# Settings"))
+        settingsOpen = false;
+
+      // --- Appearance section ---
+      GuiGroupBox((Rectangle){x, y, w, 150}, "Appearance");
+      y += 15;
+      GuiSlider((Rectangle){x + 90, y, w - 150, 20}, "Font size",
+                TextFormat("%d", (int)setting.fontSize), &setting.fontSize, 12,
+                32);
+      y += 35;
+      GuiSlider((Rectangle){x + 90, y, w - 150, 20}, "Opacity",
+                TextFormat("%0.2f", (float)setting.opacity), &setting.opacity,
+                0.30, 1.00);
+      y += 35;
+      // dropdown LAST so its open list draws on top of everything above
+      GuiLabel((Rectangle){x + 30, y, w - 150, 20}, "Theme");
+
+      if (GuiDropdownBox((Rectangle){x + 90, y, w - 150, 20},
+                         "Default;Dark;Cyber;Jungle", &setting.themeIndex,
+                         setting.themeEditMode))
+        setting.themeEditMode = !setting.themeEditMode;
+
+      y += 35;
+      GuiCheckBox((Rectangle){x + 10, y, 20, 20}, "Dark mode",
+                  &setting.darkMode);
+
+      // --- Behaviour section ---
+      y += 50;
+      GuiGroupBox((Rectangle){x, y, w, 60}, "Behaviour");
+      GuiCheckBox((Rectangle){x + 10, y + 20, 20, 20}, "Show completed todos",
+                  &setting.showCompleted);
+
+      GuiUnlock();
     }
-
     EndDrawing();
   }
   printf("exited alrady");

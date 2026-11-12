@@ -15,7 +15,7 @@ endif
 TARGET = main
 SRC = $(wildcard *.c)                 # NEW: compile every .c in the folder
 CC = gcc
-CFLAGS = -Wall -std=gnu99 -O2 -I.     # NEW: gnu99 (gives M_PI) + -I. for raygui.h
+CFLAGS = -O3 -march=native -flto -s -Wall -std=gnu99 -O2 -I.     # NEW: gnu99 (gives M_PI) + -I. for raygui.h
 
 # 3. OS-Specific Configurations
 ifeq ($(PLATFORM),MAC)
@@ -44,11 +44,14 @@ endif
 
 all: $(TARGET) compile_flags.txt                      # NEW: also writes clangd file
 
-$(TARGET): $(SRC) raygui.h                            # NEW: needs raygui.h
+$(TARGET): $(SRC) raylib.h raygui.h                            # NEW: needs raygui.h
 	$(CC) $(SRC) -o $(TARGET) $(CFLAGS) $(LDFLAGS)
 	mv $(TARGET) bin/
 
-# NEW: download raygui once if it's missing
+#download raylib if its misisng 
+raylib.h:
+	curl -fsSL -o raylib.h https://raw.githubusercontent.com/raysan5/raylib/master/src/raylib.h
+	# NEW: download raygui once if it's missing
 raygui.h:
 	curl -fsSL -o raygui.h https://raw.githubusercontent.com/raysan5/raygui/5.0/src/raygui.h
 
